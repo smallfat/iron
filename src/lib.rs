@@ -1,5 +1,5 @@
-mod client;
-mod server;
+pub mod client;
+pub mod server;
 mod connection;
 mod frame;
 mod handler;
@@ -17,9 +17,5 @@ mod tests {
     fn it_works() {
         let result = add(2, 2);
         assert_eq!(result, 4);
-    }
-
-    #[test]
-    fn run_server() {
     }
 }

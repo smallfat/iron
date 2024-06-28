@@ -24,10 +24,10 @@ impl Server {
 
                 let conn_reader = ConnReader {
                     read_stream: read_half,
-                    read_buffer: BytesMut::with_capacity(4*1024),
+                    read_buffer: [0; 1024],
                 };
 
-                let read_handler = ReadHandler {
+                let mut read_handler = ReadHandler {
                     conn_reader,
                 };
 
@@ -39,9 +39,9 @@ impl Server {
                     }
                 });
 
-                let conn_writer = ConnWriter {
+                let mut conn_writer = ConnWriter {
                     write_stream: write_half,
-                    write_buffer: BytesMut::with_capacity(4*1024*1024),
+                    write_buffer: [0_u8; 1024],
                 };
 
                 let write_handler = WriteHandler {
