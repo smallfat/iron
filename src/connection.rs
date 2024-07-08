@@ -1,10 +1,10 @@
 use crate::common;
-use std::net::SocketAddr;
+use std::net::{SocketAddr};
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::mpsc;
-use crate::common::Mail;
+use crate::common::{Mail};
 
 pub struct ConnContext {
     pub peer_addr: SocketAddr,

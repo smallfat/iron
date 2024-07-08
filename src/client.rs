@@ -1,17 +1,21 @@
+use std::pin::Pin;
+use std::sync::Arc;
 use anyhow::Result;
-use bytes::BytesMut;
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::mpsc;
+use tokio::sync::mpsc::error::SendError;
 use crate::connection::{ConnContext, ConnReader, ConnWriter};
 use crate::handler::{ReadHandler, WriteHandler};
+use crate::common::Mail;
 
 pub struct Client {
     context: ConnContext,
 }
 
 impl Client {
-    pub async fn connect<T: ToSocketAddrs>(&mut self, addr: T) -> Result<()> {
+    pub async fn connect<T: ToSocketAddrs>(addr: T) -> Result<Self> {
         let socket = TcpStream::connect(addr).await?;
+        let addr = socket.peer_addr()?;
 
         let (tx, rx) = mpsc::channel(4 * 1024);
 
@@ -52,14 +56,16 @@ impl Client {
             };
         });
 
-        let addr = socket.peer_addr()?;
 
-        self.context = ConnContext {peer_addr: addr, buffer: tx};
 
-        Ok(())
+        Ok(Client{ context: ConnContext {peer_addr: addr, buffer: tx}})
     }
 
-    pub fn sendData(data: BytesMut) {
+    pub async fn send_data(&mut self, data: Arc<Pin<Mail>>) -> Result<()> {
+        if let Err(err) = self.context.buffer.send(data).await {
+            return Err(anyhow::Error::from(err));
+        }
 
+        Ok(())
     }
 }

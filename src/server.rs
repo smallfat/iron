@@ -1,10 +1,5 @@
-use std::net::Shutdown;
-use std::sync::mpsc;
 use anyhow::{Error, Result};
-use bytes::{Bytes, BytesMut};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::net::unix::SocketAddr;
-use tokio::sync::broadcast;
 use crate::connection::{ConnReader, ConnWriter};
 use crate::handler::{ReadHandler, WriteHandler};
 
@@ -21,6 +16,8 @@ impl Server {
         loop {
             if let Ok(socket) = self.accept().await {
                 let (read_half, write_half) = socket.into_split();
+                let (tx, rx) = tokio::sync::mpsc::channel(4 * 1024);
+
 
                 let conn_reader = ConnReader {
                     read_stream: read_half,
@@ -41,7 +38,7 @@ impl Server {
 
                 let mut conn_writer = ConnWriter {
                     write_stream: write_half,
-                    write_buffer: [0_u8; 1024],
+                    write_buffer: rx,
                 };
 
                 let write_handler = WriteHandler {

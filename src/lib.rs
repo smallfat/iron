@@ -3,7 +3,7 @@ pub mod server;
 mod connection;
 mod frame;
 mod handler;
-mod common;
+pub mod common;
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right

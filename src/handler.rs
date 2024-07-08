@@ -1,6 +1,4 @@
 use anyhow::Result;
-use std::net::Shutdown;
-use futures::future::ok;
 use tokio::io::AsyncReadExt;
 use crate::connection::{ConnReader, ConnWriter};
 
@@ -12,7 +10,7 @@ impl ReadHandler {
     pub async fn read(&mut self) -> Result<()> {
 
         // read data from half stream
-        while 1 {
+        while true {
             if let Ok(r) = self.conn_reader.read_stream.read(&mut self.conn_reader.read_buffer).await {
 
             } else {

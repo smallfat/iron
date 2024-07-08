@@ -1,8 +1,10 @@
+use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::time::Sleep;
+use bytes::BufMut;
 use iron::server;
-use iron::client;
 use iron::client::Client;
+use iron::common::Mail;
 
 #[tokio::test]
 async fn test_build_connection() {
@@ -15,8 +17,7 @@ async fn test_build_connection() {
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     // start client
-    let c = Client{};
-    if let Ok(r) = c.connect("127.0.0.1:1821").await {
+    if let Ok(client) = Client::connect("127.0.0.1:1821").await {
         assert!(true)
     } else {
         assert!(false)
@@ -35,14 +36,15 @@ async fn test_send_data() {
     tokio::time::sleep(Duration::from_secs(1)).await;
 
     // start client
-    let c = Client{};
-    if let Ok(r) = c.connect("127.0.0.1:1821").await {
-        assert!(true)
+    if let Ok(mut client) = Client::connect("127.0.0.1:1821").await {
+        let mut mail = Mail { data: Vec::new()};
+        mail.data.put_bytes(b'i', 10);
+        if let Ok(result) = client.send_data(Arc::new(Pin::new(&mut &mail))).await {
+            assert!(true)
+        } else {
+            assert!(false)
+        }
     } else {
         assert!(false)
     }
-
-    // send data
-
-
 }
