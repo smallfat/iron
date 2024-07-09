@@ -8,7 +8,7 @@ use crate::common::{Mail};
 
 pub struct ConnContext {
     pub peer_addr: SocketAddr,
-    pub buffer: mpsc::Sender<Arc<Pin<Mail>>>,
+    pub buffer: mpsc::Sender<Arc<Mail>>,
 }
 
 pub struct ConnReader {
@@ -20,6 +20,6 @@ pub struct ConnReader {
 pub struct ConnWriter {
     pub write_stream: OwnedWriteHalf,
 
-    pub write_buffer: mpsc::Receiver<Arc<Pin<common::Mail>>>,
+    pub write_buffer: mpsc::Receiver<Arc<common::Mail>>,
 }
 

@@ -41,7 +41,7 @@ impl Server {
                     write_buffer: rx,
                 };
 
-                let write_handler = WriteHandler {
+                let mut write_handler = WriteHandler {
                     conn_writer,
                 };
 

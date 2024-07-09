@@ -44,7 +44,7 @@ impl Client {
             write_buffer: rx,
         };
 
-        let write_handler = WriteHandler {
+        let mut write_handler = WriteHandler {
             conn_writer,
         };
 
@@ -61,7 +61,7 @@ impl Client {
         Ok(Client{ context: ConnContext {peer_addr: addr, buffer: tx}})
     }
 
-    pub async fn send_data(&mut self, data: Arc<Pin<Mail>>) -> Result<()> {
+    pub async fn send_data(&mut self, data: Arc<Mail>) -> Result<()> {
         if let Err(err) = self.context.buffer.send(data).await {
             return Err(anyhow::Error::from(err));
         }
