@@ -13,8 +13,14 @@ impl Server {
     }
 
     pub async fn run(&self) -> Result<()> {
+        println!("server run");
+
+
         loop {
+            println!("prepare for accept");
             if let Ok(socket) = self.accept().await {
+                println!("receive connection");
+
                 let (read_half, write_half) = socket.into_split();
                 let (tx, rx) = tokio::sync::mpsc::channel(4 * 1024);
 
@@ -28,7 +34,7 @@ impl Server {
                     conn_reader,
                 };
 
-                tokio::spawn(async move {
+                let _ = tokio::spawn(async move {
                     if let Ok(()) = read_handler.read().await {
                         // graceful disconnection
                     } else {
@@ -45,7 +51,7 @@ impl Server {
                     conn_writer,
                 };
 
-                tokio::spawn(async move {
+                _ = tokio::spawn(async move {
                     if let Ok(()) = write_handler.write().await {
                         // graceful disconnection
                     } else {
@@ -62,10 +68,15 @@ impl Server {
 
     pub async fn accept(&self) -> Result<TcpStream> {
         if let Ok(listener) = TcpListener::bind(&self.addr).await {
-            match listener.accept().await {
-                Ok((socket, _)) => return Ok(socket),
+            return match listener.accept().await {
+                Ok((socket, _)) => {
+                    println!("accept connection request");
+
+                    Ok(socket)
+                },
                 Err(err) => {
-                    return Err(err.into());
+                    println!("accept connection request failed");
+                    Err(err.into())
                 }
             }
         } else {

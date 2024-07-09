@@ -3,7 +3,6 @@ use std::sync::Arc;
 use anyhow::Result;
 use tokio::net::{TcpStream, ToSocketAddrs};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::error::SendError;
 use crate::connection::{ConnContext, ConnReader, ConnWriter};
 use crate::handler::{ReadHandler, WriteHandler};
 use crate::common::Mail;
@@ -16,6 +15,8 @@ impl Client {
     pub async fn connect<T: ToSocketAddrs>(addr: T) -> Result<Self> {
         let socket = TcpStream::connect(addr).await?;
         let addr = socket.peer_addr()?;
+
+        println!("client, connect ok , peer addr {:?}", addr);
 
         let (tx, rx) = mpsc::channel(4 * 1024);
 
@@ -31,7 +32,7 @@ impl Client {
             conn_reader,
         };
 
-        tokio::spawn(async move {
+        let _ = tokio::spawn(async move {
             if let Ok(()) = read_handler.read().await {
                 // graceful disconnection
             } else {
@@ -48,15 +49,13 @@ impl Client {
             conn_writer,
         };
 
-        tokio::spawn(async move {
+        let _ = tokio::spawn(async move {
             if let Ok(()) = write_handler.write().await {
                 // graceful disconnection
             } else {
                 // error
             };
         });
-
-
 
         Ok(Client{ context: ConnContext {peer_addr: addr, buffer: tx}})
     }
