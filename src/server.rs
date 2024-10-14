@@ -1,7 +1,10 @@
+use std::fmt::Debug;
 use anyhow::{Error, Result};
 use tokio::net::{TcpListener, TcpStream};
+use crate::common::IMailData;
 use crate::connection::{ConnReader, ConnWriter};
 use crate::handler::{ReadHandler, WriteHandler};
+use crate::notifier::NotifierType;
 
 pub struct Server {
     addr: String,
@@ -12,9 +15,8 @@ impl Server {
         Server { addr: bind_addr }
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn run<T: IMailData + Send + Sync + Debug + 'static>(&self, notifier: NotifierType<T>) -> Result<()> {
         println!("server run");
-
 
         loop {
             println!("prepare for accept");
@@ -30,15 +32,20 @@ impl Server {
                     read_buffer: [0; 1024],
                 };
 
+                let notifier1 = notifier.clone();
                 let mut read_handler = ReadHandler {
                     conn_reader,
+                    notifier: notifier1,
                 };
 
+                let notifier2 = notifier.clone();
                 let _ = tokio::spawn(async move {
                     if let Ok(()) = read_handler.read().await {
                         // graceful disconnection
+                        notifier2.OnDisconnect();
                     } else {
                         // error
+                        notifier2.OnError(String::from("read data error"));
                     }
                 });
 
@@ -47,19 +54,24 @@ impl Server {
                     write_buffer: rx,
                 };
 
-                let mut write_handler = WriteHandler {
+                let mut write_handler = WriteHandler::<T> {
                     conn_writer,
                 };
 
+                let notifier3 = notifier.clone();
                 _ = tokio::spawn(async move {
                     if let Ok(()) = write_handler.write().await {
                         // graceful disconnection
+                        notifier3.OnDisconnect();
                     } else {
                         // error
+                        notifier3.OnError(String::from("write data error"));
                     };
                 });
             } else {
                 // accept error
+                notifier.OnError(String::from("accept error"));
+                break;
             }
         }
 
@@ -87,7 +99,7 @@ impl Server {
     }
 }
 
-pub async fn start_server(addr: String) -> Result<()> {
+pub async fn start_server<T: IMailData + Send + Sync + Debug + 'static>(addr: String, notifier: NotifierType<T>) -> Result<()> {
     let server = Server::new(addr);
-    server.run().await
+    server.run::<T>(notifier).await
 }
