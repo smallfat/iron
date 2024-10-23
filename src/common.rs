@@ -4,14 +4,24 @@
 
 pub type Mail<T> = Box<T>;
 
+
 pub trait IMailData {
     fn get_data(&self) -> &Vec<u8>;
-    fn set_data(&self, data: &[u8]) -> bool;
+    fn get_data_len(&self) -> u32;
+    fn set_data(&mut self, data: &[u8]) -> bool;
+
 }
 
-pub fn create<T: Default>() -> T
-{
-    T::default()
+#[derive(Default)]
+pub struct GenericsFactory<T> {
+    f1:T,
+}
+
+
+impl<T:Default> GenericsFactory<T> {
+    pub fn create_instance() -> T {
+        T::default()
+    }
 }
 //
 // //

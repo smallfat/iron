@@ -12,7 +12,7 @@ pub struct Client<T> {
     context: ConnContext<T>,
 }
 
-impl<T: IMailData + Send + Sync + Debug + 'static> Client<T> {
+impl<T: IMailData + Send + Sync + Debug + 'static + Default> Client<T> {
     pub async fn connect<S: ToSocketAddrs>(addr: S, notifier: NotifierType<T>) -> Result<Self> {
         let socket = TcpStream::connect(addr).await?;
         let addr = socket.peer_addr()?;
@@ -38,9 +38,11 @@ impl<T: IMailData + Send + Sync + Debug + 'static> Client<T> {
 
         let _ = tokio::spawn(async move {
             if let Ok(()) = read_handler.read().await {
+                println!("n1 OnDisconnect");
                 // graceful disconnection
                 n1.OnDisconnect();
             } else {
+                println!("n1 OnError");
                 // error
                 n1.OnError(String::from("read data error"));
             }

@@ -5,6 +5,7 @@ use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::sync::mpsc;
 use crate::common::{Mail};
 
+#[derive(Clone)]
 pub struct ConnContext<T> {
     pub peer_addr: SocketAddr,
     pub buffer: mpsc::Sender<Arc<Mail<T>>>,

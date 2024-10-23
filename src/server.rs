@@ -1,26 +1,29 @@
 use std::fmt::Debug;
+use std::sync::Arc;
 use anyhow::{Error, Result};
 use tokio::net::{TcpListener, TcpStream};
-use crate::common::IMailData;
-use crate::connection::{ConnReader, ConnWriter};
+use crate::common::{IMailData, Mail};
+use crate::connection::{ConnContext, ConnReader, ConnWriter};
 use crate::handler::{ReadHandler, WriteHandler};
 use crate::notifier::NotifierType;
 
-pub struct Server {
+pub struct Server<T> {
     addr: String,
+    context: Option<ConnContext<T>>,
 }
 
-impl Server {
-    fn new(bind_addr: String) -> Server {
-        Server { addr: bind_addr }
+impl<T: IMailData + Send + Sync + Debug + 'static + Default> Server<T> {
+    fn new(bind_addr: String) -> Server<T> {
+        Server::<T> { addr: bind_addr, context: None }
     }
 
-    pub async fn run<T: IMailData + Send + Sync + Debug + 'static>(&self, notifier: NotifierType<T>) -> Result<()> {
+    pub async fn run(&mut self, notifier: NotifierType<T>) -> Result<()> {
         println!("server run");
 
         loop {
             println!("prepare for accept");
             if let Ok(socket) = self.accept().await {
+                let addr = (&socket).peer_addr().unwrap();
                 println!("receive connection");
 
                 let (read_half, write_half) = socket.into_split();
@@ -40,12 +43,14 @@ impl Server {
 
                 let notifier2 = notifier.clone();
                 let _ = tokio::spawn(async move {
-                    if let Ok(()) = read_handler.read().await {
-                        // graceful disconnection
-                        notifier2.OnDisconnect();
-                    } else {
+                    if let Err(e) = read_handler.read().await {
+                        println!("notifier2.OnError {}", e);
                         // error
                         notifier2.OnError(String::from("read data error"));
+                    } else {
+                        println!("notifier2.OnDisconnect");
+                        // graceful disconnection
+                        notifier2.OnDisconnect();
                     }
                 });
 
@@ -58,9 +63,12 @@ impl Server {
                     conn_writer,
                 };
 
+                self.context = Some(ConnContext {peer_addr: addr, buffer: tx});
+
                 let notifier3 = notifier.clone();
                 _ = tokio::spawn(async move {
                     if let Ok(()) = write_handler.write().await {
+                        println!("notifier3.OnDisconnect");
                         // graceful disconnection
                         notifier3.OnDisconnect();
                     } else {
@@ -69,6 +77,7 @@ impl Server {
                     };
                 });
             } else {
+                println!("accept error");
                 // accept error
                 notifier.OnError(String::from("accept error"));
                 break;
@@ -94,12 +103,27 @@ impl Server {
         } else {
             Err(Error::msg("bind address error"))
         }
+    }
 
+    pub async fn send_data(&self, data: Arc<Mail<T>>) -> Result<()> {
+        let cxt = &self.context;
+        match cxt {
+            None => {
+                return Err(anyhow::anyhow!("invalid connection context"));
+            }
+            Some(c) => {
+                let buf = &c.clone().buffer;
+                if let Err(err) = buf.send(data).await {
+                    return Err(anyhow::Error::from(err));
+                }
+            }
+        }
 
+        Ok(())
     }
 }
 
-pub async fn start_server<T: IMailData + Send + Sync + Debug + 'static>(addr: String, notifier: NotifierType<T>) -> Result<()> {
-    let server = Server::new(addr);
-    server.run::<T>(notifier).await
+pub async fn start_server<T: IMailData + Send + Sync + Debug + Default + 'static>(addr: String, notifier: NotifierType<T>) -> Result<()> {
+    let mut server = Server::new(addr);
+    server.run(notifier).await
 }
