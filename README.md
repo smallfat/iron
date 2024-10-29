@@ -1,2 +1,6 @@
 # iron
-a toy network library by rust
+a network library written by rust
+
+
+
+
